@@ -175,3 +175,43 @@ HX_TEST(Array, AppendKeepsOrderAcrossGrowth)
     HX_CHECK_EQ(a[499], 5u);
     HX_CHECK_EQ(a[501], 8u);
 }
+
+HX_TEST(HashMap, RandomOperationsMatchReferenceModel)
+{
+    constexpr u32 kKeys = 600;
+    HashMap<u32, u32> map;
+    u32 model[kKeys];
+    bool present[kKeys] = {};
+    u32 state = 99, count = 0, mismatches = 0;
+    for (u32 step = 0; step < 200000; step++)
+    {
+        state = state * 1664525u + 1013904223u;
+        u32 key = (state >> 8) % kKeys;
+        u32 op = (state >> 28) & 3;
+        if (op < 2)
+        {
+            map.Set(key, step);
+            count += present[key] ? 0 : 1;
+            present[key] = true;
+            model[key] = step;
+        }
+        else if (op == 2)
+        {
+            bool removed = map.Remove(key);
+            mismatches += removed != present[key] ? 1 : 0;
+            count -= present[key] ? 1 : 0;
+            present[key] = false;
+        }
+        else
+        {
+            u32* found = map.Find(key);
+            mismatches += (found != nullptr) != present[key] || (found && *found != model[key]) ? 1 : 0;
+        }
+        mismatches += map.Size() != count ? 1 : 0;
+    }
+    HX_CHECK_EQ(mismatches, 0u);
+    u32 iterated = 0;
+    for (auto e : map)
+        iterated += present[e.key] && model[e.key] == e.value ? 1 : 0;
+    HX_CHECK_EQ(iterated, count);
+}

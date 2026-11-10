@@ -4,12 +4,14 @@
 #include <Helix/Core/Hashing/Hash.h>
 #include <Helix/Core/Memory/Allocator.h>
 
+#include <bit>
 #include <cstring>
 
 namespace helix
 {
     // Open addressing with one control byte per slot: high bit set means empty or deleted,
     // otherwise the low 7 bits hold extra hash bits to skip most key compares.
+    // Probing reads 8 control bytes at a time; the first 8 are mirrored after the end so a group never wraps.
     template <typename K, typename V, typename H = Hasher<K>>
     class HashMap
     {
@@ -143,11 +145,11 @@ namespace helix
             size_--;
             if (ctrl_[(i + 1) & (capacity_ - 1)] == kEmpty)
             {
-                ctrl_[i] = kEmpty;
+                SetCtrl(i, kEmpty);
             }
             else
             {
-                ctrl_[i] = kDeleted;
+                SetCtrl(i, kDeleted);
                 deleted_++;
             }
             return true;
@@ -161,7 +163,7 @@ namespace helix
                     slots_[i].~Slot();
             }
             if (ctrl_)
-                std::memset(ctrl_, kEmpty, capacity_);
+                std::memset(ctrl_, kEmpty, capacity_ + kGroup);
             size_ = deleted_ = 0;
         }
 
@@ -177,6 +179,30 @@ namespace helix
 
         static u64 HashOf(const K& key) { return H{}(key); }
 
+        static constexpr usize kGroup = 8;
+        static constexpr u64 kLow7 = 0x7F7F7F7F7F7F7F7Full;
+
+        static u64 LoadGroup(const u8* p)
+        {
+            u64 g;
+            std::memcpy(&g, p, sizeof(g));
+            return g;
+        }
+
+        // Bit 7 of every byte of the group that equals `value`, exact.
+        static u64 MatchByte(u64 group, u8 value)
+        {
+            u64 x = group ^ (0x0101010101010101ull * value);
+            return ~(((x & kLow7) + kLow7) | x | kLow7);
+        }
+
+        void SetCtrl(usize i, u8 value)
+        {
+            ctrl_[i] = value;
+            if (i < kGroup)
+                ctrl_[capacity_ + i] = value;
+        }
+
         usize FindIndex(const K& key) const
         {
             if (size_ == 0)
@@ -184,13 +210,17 @@ namespace helix
             u64 h = HashOf(key);
             u8 tag = u8(h & 0x7F);
             usize mask = capacity_ - 1;
-            for (usize i = usize(h >> 7) & mask;; i = (i + 1) & mask)
+            for (usize i = usize(h >> 7) & mask;; i = (i + kGroup) & mask)
             {
-                u8 c = ctrl_[i];
-                if (c == kEmpty)
+                u64 group = LoadGroup(ctrl_ + i);
+                for (u64 m = MatchByte(group, tag); m; m &= m - 1)
+                {
+                    usize at = (i + usize(std::countr_zero(m) >> 3)) & mask;
+                    if (slots_[at].key == key)
+                        return at;
+                }
+                if (MatchByte(group, kEmpty))
                     return npos;
-                if (c == tag && slots_[i].key == key)
-                    return i;
             }
         }
 
@@ -202,30 +232,28 @@ namespace helix
             u8 tag = u8(h & 0x7F);
             usize mask = capacity_ - 1;
             usize target = npos;
-            for (usize i = usize(h >> 7) & mask;; i = (i + 1) & mask)
+            for (usize i = usize(h >> 7) & mask;; i = (i + kGroup) & mask)
             {
-                u8 c = ctrl_[i];
-                if (c == kEmpty)
+                u64 group = LoadGroup(ctrl_ + i);
+                for (u64 m = MatchByte(group, tag); m; m &= m - 1)
                 {
-                    if (target == npos)
-                        target = i;
+                    usize at = (i + usize(std::countr_zero(m) >> 3)) & mask;
+                    if (slots_[at].key == key)
+                    {
+                        inserted = false;
+                        return at;
+                    }
+                }
+                // Empty and deleted bytes are the only ones with the high bit set; the first one is the insert position.
+                u64 free = group & ~kLow7;
+                if (target == npos && free)
+                    target = (i + usize(std::countr_zero(free) >> 3)) & mask;
+                if (MatchByte(group, kEmpty))
                     break;
-                }
-                if (c == kDeleted)
-                {
-                    if (target == npos)
-                        target = i;
-                    continue;
-                }
-                if (c == tag && slots_[i].key == key)
-                {
-                    inserted = false;
-                    return i;
-                }
             }
             if (ctrl_[target] == kDeleted)
                 deleted_--;
-            ctrl_[target] = tag;
+            SetCtrl(target, tag);
             size_++;
             inserted = true;
             return target;
@@ -238,9 +266,9 @@ namespace helix
             Slot* oldSlots = slots_;
             usize oldCapacity = capacity_;
 
-            ctrl_ = static_cast<u8*>(allocator_->Allocate(capacity, 16));
+            ctrl_ = static_cast<u8*>(allocator_->Allocate(capacity + kGroup, 16));
             slots_ = static_cast<Slot*>(allocator_->Allocate(capacity * sizeof(Slot), alignof(Slot)));
-            std::memset(ctrl_, kEmpty, capacity);
+            std::memset(ctrl_, kEmpty, capacity + kGroup);
             capacity_ = capacity;
             deleted_ = 0;
 
@@ -253,13 +281,13 @@ namespace helix
                 usize i = usize(h >> 7) & mask;
                 while (ctrl_[i] != kEmpty)
                     i = (i + 1) & mask;
-                ctrl_[i] = u8(h & 0x7F);
+                SetCtrl(i, u8(h & 0x7F));
                 ::new (&slots_[i]) Slot(Move(oldSlots[j]));
                 oldSlots[j].~Slot();
             }
             if (oldCtrl)
             {
-                allocator_->Free(oldCtrl, oldCapacity, 16);
+                allocator_->Free(oldCtrl, oldCapacity + kGroup, 16);
                 allocator_->Free(oldSlots, oldCapacity * sizeof(Slot), alignof(Slot));
             }
         }
@@ -268,7 +296,7 @@ namespace helix
         {
             if (!ctrl_)
                 return;
-            allocator_->Free(ctrl_, capacity_, 16);
+            allocator_->Free(ctrl_, capacity_ + kGroup, 16);
             allocator_->Free(slots_, capacity_ * sizeof(Slot), alignof(Slot));
             ctrl_ = nullptr;
             slots_ = nullptr;
