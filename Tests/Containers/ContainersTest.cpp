@@ -157,3 +157,21 @@ HX_TEST(Array, ResizeGrowsGeometrically)
     HX_CHECK(reallocations < 40);
     HX_CHECK_EQ(a[99999], 0);
 }
+
+HX_TEST(Array, AppendKeepsOrderAcrossGrowth)
+{
+    Array<u32> a;
+    const u32 block[5] = {1, 2, 3, 4, 5};
+    for (int i = 0; i < 100; i++)
+        a.Append(block, 5);
+    u32* tail = a.AppendUninitialized(2);
+    tail[0] = 7;
+    tail[1] = 8;
+    HX_CHECK_EQ(a.Size(), 502u);
+    u32 sum = 0;
+    for (u32 v : a)
+        sum += v;
+    HX_CHECK_EQ(sum, 1515u);
+    HX_CHECK_EQ(a[499], 5u);
+    HX_CHECK_EQ(a[501], 8u);
+}

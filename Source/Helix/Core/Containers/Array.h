@@ -169,6 +169,25 @@ namespace helix
             }
         }
 
+        // Grows by `count` elements without clearing them (trivial types only) and returns the first new element.
+        T* AppendUninitialized(usize count)
+            requires std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>
+        {
+            usize at = size_;
+            if (at + count > capacity_)
+                Reallocate(GrowCapacity(at + count));
+            size_ = at + count;
+            return data_ + at;
+        }
+
+        void Append(const T* values, usize count)
+            requires std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>
+        {
+            HX_ASSERT(values + count <= data_ || values >= data_ + capacity_);
+            if (count)
+                std::memcpy(static_cast<void*>(AppendUninitialized(count)), values, count * sizeof(T));
+        }
+
         void Resize(usize size, const T& value)
         {
             if (size > capacity_)
