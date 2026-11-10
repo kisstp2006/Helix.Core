@@ -52,6 +52,8 @@ HX_TEST(String, AppendSelfAndResize)
     HX_CHECK(s == "abxx");
     s = s.View().Substr(1);
     HX_CHECK(s == "bxx");
+    s = "literal";
+    HX_CHECK(s == "literal");
 }
 
 HX_TEST(Format, Integers)

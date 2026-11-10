@@ -20,6 +20,7 @@ namespace helix
         String& operator=(const String& other);
         String& operator=(String&& other) noexcept;
         String& operator=(StringView text);
+        String& operator=(const char* text) { return *this = StringView(text); }
 
         const char* Data() const { return data_; }
         char* Data() { return data_; }
