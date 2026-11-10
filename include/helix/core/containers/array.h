@@ -152,16 +152,27 @@ namespace helix
 
         void Resize(usize size)
         {
-            Reserve(size);
-            while (size_ < size)
-                ::new (data_ + size_++) T();
-            while (size_ > size)
-                Pop();
+            if (size > capacity_)
+                Reallocate(GrowCapacity(size));
+            if constexpr (std::is_trivially_default_constructible_v<T> && std::is_trivially_destructible_v<T>)
+            {
+                if (size > size_)
+                    std::memset(static_cast<void*>(data_ + size_), 0, (size - size_) * sizeof(T));
+                size_ = size;
+            }
+            else
+            {
+                while (size_ < size)
+                    ::new (data_ + size_++) T();
+                while (size_ > size)
+                    Pop();
+            }
         }
 
         void Resize(usize size, const T& value)
         {
-            Reserve(size);
+            if (size > capacity_)
+                Reallocate(GrowCapacity(size));
             while (size_ < size)
                 ::new (data_ + size_++) T(value);
             while (size_ > size)

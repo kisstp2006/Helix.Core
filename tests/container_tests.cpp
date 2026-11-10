@@ -140,3 +140,20 @@ HX_TEST(HashMap, StringKeysAndIteration)
     map.Clear();
     HX_CHECK_EQ(Tracked::alive, 3);
 }
+
+HX_TEST(Array, ResizeGrowsGeometrically)
+{
+    Array<u8> a;
+    usize reallocations = 0, last = 0;
+    for (usize i = 1; i <= 100000; i++)
+    {
+        a.Resize(i);
+        if (a.Capacity() != last)
+        {
+            reallocations++;
+            last = a.Capacity();
+        }
+    }
+    HX_CHECK(reallocations < 40);
+    HX_CHECK_EQ(a[99999], 0);
+}
