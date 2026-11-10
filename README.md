@@ -35,7 +35,8 @@ Spec: `{}` or `{:[<|>][0][width][.precision][x|X|b|e|f|g|p]}`, `{{` and `}}` are
 ## Build
 
 ```
-git clone --recursive https://github.com/kisstp2006/Helix.Core
+git clone https://github.com/kisstp2006/Helix.Core
+git -C Helix.Core submodule update --init
 cmake --preset windows-debug
 cmake --build --preset windows-debug
 ctest --preset windows-debug
