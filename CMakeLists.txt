@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 project(Helix.Core LANGUAGES CXX)
 
 if(NOT COMMAND helix_add_library)
-    include("${CMAKE_CURRENT_SOURCE_DIR}/external/Helix.CMake/Helix.cmake")
+    include("${CMAKE_CURRENT_SOURCE_DIR}/External/Helix.CMake/Helix.cmake")
 endif()
 
 helix_add_library(helix_core ALIAS Core)

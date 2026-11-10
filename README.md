@@ -8,15 +8,15 @@ source for GUIDs and the console log sink.
 
 | Path | Content |
 |---|---|
-| `include/helix/core/base/` | `types.h`, `platform.h` (platform and compiler macros), `assert.h`, `utility.h`, `span.h` |
-| `include/helix/core/memory/` | `Allocator` interface, heap allocator with stats, `LinearAllocator`, `PoolAllocator` |
-| `include/helix/core/containers/` | `Array<T>`, `HashMap<K, V>` (open addressing with control bytes) |
-| `include/helix/core/strings/` | `StringView`, `String` (23 byte inline storage), `Format` |
-| `include/helix/core/hash/` | `Hash64` (XXH64 algorithm), `Crc32`, `Fnv1a64`, `Md5` |
-| `include/helix/core/guid/` | `Guid` (128 bit, 32 hex character text form) |
-| `include/helix/core/log/` | Log channels, levels, sinks, `HX_LOG_*` macros |
-| `src/` | Implementation, `src/platform/<platform>/` for OS specific files |
-| `tests/`, `bench/` | Unit tests and benchmarks |
+| `Source/Helix/Core/Basics/` | `Types.h`, `Platform.h` (platform and compiler macros), `Assert.h`, `Utility.h`, `Span.h` |
+| `Source/Helix/Core/Memory/` | `Allocator` interface, heap allocator with stats, `LinearAllocator`, `PoolAllocator` |
+| `Source/Helix/Core/Containers/` | `Array<T>`, `HashMap<K, V>` (open addressing with control bytes) |
+| `Source/Helix/Core/Strings/` | `StringView`, `String` (23 byte inline storage), `Format` |
+| `Source/Helix/Core/Hashing/` | `Hash64` (XXH64 algorithm), `Crc32`, `Fnv1a64`, `Md5` |
+| `Source/Helix/Core/Types/` | `Guid` (128 bit, 32 hex character text form) |
+| `Source/Helix/Core/Logging/` | Log channels, levels, sinks, `HX_LOG_*` macros |
+| `.../<Topic>/Implementation/` | Sources, `.../<Topic>/Platform/<Win\|Posix>/` for OS specific files |
+| `Tests/<Topic>/`, `Benchmarks/` | Unit tests and benchmarks |
 
 ## Rules
 
