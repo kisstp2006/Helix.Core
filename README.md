@@ -8,7 +8,7 @@ source for GUIDs and the console log sink.
 
 | Path | Content |
 |---|---|
-| `Source/Helix/Core/Basics/` | `Types.h`, `Platform.h` (platform and compiler macros), `Assert.h`, `Utility.h`, `Span.h` |
+| `Source/Helix/Core/Basics/` | `Types.h`, `Platform.h` (platform and compiler macros, `HX_IMPORT_DATA`), `Assert.h`, `Utility.h`, `Span.h`, `Tags.h` (the tags Helix.Bindgen reads, expanding to nothing) |
 | `Source/Helix/Core/Memory/` | `Allocator` interface, heap allocator with stats, `LinearAllocator`, `PoolAllocator` |
 | `Source/Helix/Core/Containers/` | `Array<T>`, `HashMap<K, V>` (open addressing with control bytes) |
 | `Source/Helix/Core/Strings/` | `StringView`, `String` (23 byte inline storage), `Format` |
