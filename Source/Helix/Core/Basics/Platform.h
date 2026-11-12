@@ -60,3 +60,11 @@
 #define HX_LIKELY(x) __builtin_expect(!!(x), 1)
 #define HX_UNLIKELY(x) __builtin_expect(!!(x), 0)
 #endif
+
+// Global data the headers read, in the shared engine library (HelixEngine): code built against that library
+// (HX_SHARED_IMPORT: the player, game modules) imports it on Windows; the libraries' own code defines it.
+#if HX_PLATFORM_WINDOWS && defined(HX_SHARED_IMPORT)
+#define HX_IMPORT_DATA __declspec(dllimport)
+#else
+#define HX_IMPORT_DATA
+#endif

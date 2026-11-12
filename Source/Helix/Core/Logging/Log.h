@@ -37,7 +37,7 @@ namespace helix
     const char* LogLevelName(LogLevel level);
     void WriteLog(const LogChannel& channel, LogLevel level, const char* file, int line, StringView text);
 
-    extern LogChannel CoreLog;
+    extern HX_IMPORT_DATA LogChannel CoreLog;
 
     template <typename... Args>
     void Log(const LogChannel& channel, LogLevel level, const char* file, int line, StringView format, const Args&... args)
